@@ -24,10 +24,15 @@ class _GameScreenState extends State<GameScreen> {
     text: '20',
   );
   final TextEditingController _importController = TextEditingController();
+  bool _gameEnded = false;
+  int _finalGenerationCount = 0;
+  String? _importError; // Add error message holder for JSON validation
 
   @override
   void initState() {
     super.initState();
+    // Add listener to validate JSON as user types
+    _importController.addListener(_validateJsonInput);
   }
 
   @override
@@ -51,6 +56,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _isRunning = true;
       _isPaused = false;
+      _gameEnded = false;
     });
 
     // Calculate milliseconds from the speed (which is in generations per second)
@@ -58,7 +64,14 @@ class _GameScreenState extends State<GameScreen> {
 
     _timer = Timer.periodic(Duration(milliseconds: milliseconds), (timer) {
       setState(() {
-        _gameModel.updateToNextGeneration();
+        bool hasChanged = _gameModel.updateToNextGeneration();
+
+        // If no changes occurred, the game has reached a stable state
+        if (!hasChanged) {
+          _finalGenerationCount = _gameModel.generationCount;
+          _gameEnded = true;
+          _stopSimulation();
+        }
       });
     });
   }
@@ -87,6 +100,7 @@ class _GameScreenState extends State<GameScreen> {
 
     setState(() {
       _gameModel.resetGrid();
+      _gameEnded = false;
     });
   }
 
@@ -108,10 +122,92 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  // Add JSON validation method
+  void _validateJsonInput() {
+    if (_importController.text.trim().isEmpty) {
+      setState(() {
+        _importError = null;
+      });
+      return;
+    }
+
+    try {
+      final jsonText = _importController.text.trim();
+      final decoded = jsonDecode(jsonText);
+
+      // Check if it's an array
+      if (decoded is! List) {
+        setState(() {
+          _importError = 'Input must be a JSON array';
+        });
+        return;
+      }
+
+      // Check if it's a 2D array
+      if (decoded.isEmpty) {
+        setState(() {
+          _importError = 'Grid cannot be empty';
+        });
+        return;
+      }
+
+      // Check each row
+      int rowLength = -1;
+      for (var i = 0; i < decoded.length; i++) {
+        final row = decoded[i];
+        if (row is! List) {
+          setState(() {
+            _importError = 'Row $i must be an array';
+          });
+          return;
+        }
+
+        // Check consistency of row lengths
+        if (rowLength == -1) {
+          rowLength = row.length;
+        } else if (row.length != rowLength) {
+          setState(() {
+            _importError = 'All rows must have the same length';
+          });
+          return;
+        }
+
+        // Check each cell is a valid value (0, 1, true, or false)
+        for (var j = 0; j < row.length; j++) {
+          final cell = row[j];
+          if (cell != 0 && cell != 1 && cell != true && cell != false) {
+            setState(() {
+              _importError = 'Cell values must be 0, 1, true, or false';
+            });
+            return;
+          }
+        }
+      }
+
+      // If we got here, JSON is valid
+      setState(() {
+        _importError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _importError = 'Invalid JSON format';
+      });
+    }
+  }
+
   void _importGrid() {
     try {
       final String importText = _importController.text.trim();
       if (importText.isEmpty) return;
+
+      // Validate JSON before importing
+      _validateJsonInput();
+      if (_importError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_importError!), backgroundColor: Colors.red),
+        );
+        return;
+      }
 
       // Parse the imported text as a JSON array
       List<dynamic> jsonList = jsonDecode(importText) as List<dynamic>;
@@ -151,17 +247,46 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  void _dismissEndScreen() {
+    setState(() {
+      _gameEnded = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Check if the screen width is large enough for horizontal layout
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth > 800;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Conway\'s Game of Life'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
-      body: Center(
-        child: Column(
-          children: [
-            Padding(
+      body: Stack(
+        children: [
+          SafeArea(
+            child:
+                isWideScreen
+                    ? _buildHorizontalLayout()
+                    : _buildVerticalLayout(),
+          ),
+          if (_gameEnded) _buildEndScreen(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorizontalLayout() {
+    return Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.stretch, // Changed from start to stretch
+      children: [
+        Expanded(
+          flex: 3, // Grid takes more space
+          child: Center(
+            child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: GridWidget(
                 gridModel: _gameModel,
@@ -169,25 +294,61 @@ class _GameScreenState extends State<GameScreen> {
                 enabled: !_isRunning || _isPaused,
               ),
             ),
-            _buildControlPanel(),
-          ],
+          ),
         ),
+        Expanded(
+          flex: 2, // Controls take less space
+          child: _buildControlPanel(
+            isFullHeight: true,
+          ), // Pass parameter to indicate full height
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerticalLayout() {
+    return Center(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: GridWidget(
+              gridModel: _gameModel,
+              onCellTap: _toggleCell,
+              enabled: !_isRunning || _isPaused,
+            ),
+          ),
+          _buildControlPanel(
+            isFullHeight: false,
+          ), // Not full height in vertical layout
+        ],
       ),
     );
   }
 
-  Widget _buildControlPanel() {
-    return Expanded(
-      child: SingleChildScrollView(
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+  Widget _buildControlPanel({bool isFullHeight = false}) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      height:
+          isFullHeight
+              ? double.infinity
+              : null, // Take full height when requested
+      child: Center(
+        // Added Center widget
+        child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment:
+                CrossAxisAlignment.center, // Changed from stretch to center
+            mainAxisAlignment:
+                MainAxisAlignment.center, // Added main axis alignment
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Game controls
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                alignment: WrapAlignment.spaceEvenly,
                 children: [
                   if (!_isRunning || _isPaused)
                     ElevatedButton(
@@ -209,9 +370,9 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ],
               ),
-          
+
               const SizedBox(height: 16),
-          
+
               // Speed control
               Row(
                 children: [
@@ -226,7 +387,7 @@ class _GameScreenState extends State<GameScreen> {
                       onChanged: (value) {
                         setState(() {
                           _speed = value;
-          
+
                           // If simulation is running, restart it with the new speed
                           if (_isRunning && !_isPaused) {
                             _timer?.cancel();
@@ -239,9 +400,9 @@ class _GameScreenState extends State<GameScreen> {
                   Text('${_speed.toStringAsFixed(1)} gen/s'),
                 ],
               ),
-          
+
               const SizedBox(height: 16),
-          
+
               // Grid size controls
               Row(
                 children: [
@@ -270,32 +431,89 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ],
               ),
-          
+
               const SizedBox(height: 16),
-          
+
               // Import controls
-              ExpansionTile(
-                title: const Text('Import Initial State'),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _importController,
-                          decoration: const InputDecoration(
-                            labelText: 'Paste JSON array configuration',
-                            hintText: '[[0,1,0],[1,1,1],[0,1,0]]',
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Import Initial State'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _importController,
+                            decoration: InputDecoration(
+                              labelText: 'Paste JSON array configuration',
+                              hintText: '[[0,1,0],[1,1,1],[0,1,0]]',
+                              errorText:
+                                  _importError, // Display validation error
+                              errorMaxLines:
+                                  3, // Allow multiple lines for error message
+                            ),
+                            maxLines: 3,
                           ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: _importGrid,
-                          child: const Text('Import'),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed:
+                                _importError == null
+                                    ? _importGrid
+                                    : null, // Disable button if there's an error
+                            child: const Text('Import'),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEndScreen() {
+    return Container(
+      color: Colors.black54,
+      alignment: Alignment.center,
+      child: Card(
+        margin: const EdgeInsets.all(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.flag_rounded, size: 64.0, color: Colors.green),
+              const SizedBox(height: 16.0),
+              const Text(
+                'Simulation Complete',
+                style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8.0),
+              Text(
+                'The simulation has reached a stable state after $_finalGenerationCount generations.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24.0),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: _dismissEndScreen,
+                    child: const Text('Continue Observing'),
+                  ),
+                  const SizedBox(width: 16.0),
+                  ElevatedButton(
+                    onPressed: _resetGrid,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    child: const Text('Reset Game'),
                   ),
                 ],
               ),
