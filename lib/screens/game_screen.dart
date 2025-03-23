@@ -161,19 +161,12 @@ class _GameScreenState extends State<GameScreen> {
       body: Center(
         child: Column(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: GridWidget(
-                      gridModel: _gameModel,
-                      onCellTap: _toggleCell,
-                      enabled: !_isRunning || _isPaused,
-                    ),
-                  ),
-                ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: GridWidget(
+                gridModel: _gameModel,
+                onCellTap: _toggleCell,
+                enabled: !_isRunning || _isPaused,
               ),
             ),
             _buildControlPanel(),
@@ -184,124 +177,131 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildControlPanel() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Game controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Expanded(
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!_isRunning || _isPaused)
-                ElevatedButton(
-                  onPressed: _startSimulation,
-                  child: Text(_isPaused ? 'Resume' : 'Start'),
-                ),
-              if (_isRunning && !_isPaused)
-                ElevatedButton(
-                  onPressed: _pauseSimulation,
-                  child: const Text('Pause'),
-                ),
-              ElevatedButton(
-                onPressed: _stopSimulation,
-                child: const Text('Stop'),
-              ),
-              ElevatedButton(onPressed: _resetGrid, child: const Text('Reset')),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Speed control
-          Row(
-            children: [
-              const Text('Speed: '),
-              Expanded(
-                child: Slider(
-                  min: 0.2,
-                  max: 5.0,
-                  divisions: 48,
-                  value: _speed,
-                  label: '${_speed.toStringAsFixed(1)} gen/s',
-                  onChanged: (value) {
-                    setState(() {
-                      _speed = value;
-
-                      // If simulation is running, restart it with the new speed
-                      if (_isRunning && !_isPaused) {
-                        _timer?.cancel();
-                        _startSimulation();
-                      }
-                    });
-                  },
-                ),
-              ),
-              Text('${_speed.toStringAsFixed(1)} gen/s'),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Grid size controls
-          Row(
-            children: [
-              const Text('Grid Size: '),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _rowsController,
-                  decoration: const InputDecoration(labelText: 'Rows'),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const Text(' × '),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _colsController,
-                  decoration: const InputDecoration(labelText: 'Cols'),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _resizeGrid,
-                child: const Text('Apply'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Import controls
-          ExpansionTile(
-            title: const Text('Import Initial State'),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _importController,
-                      decoration: const InputDecoration(
-                        labelText: 'Paste JSON array configuration',
-                        hintText: '[[0,1,0],[1,1,1],[0,1,0]]',
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 8),
+              // Game controls
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (!_isRunning || _isPaused)
                     ElevatedButton(
-                      onPressed: _importGrid,
-                      child: const Text('Import'),
+                      onPressed: _startSimulation,
+                      child: Text(_isPaused ? 'Resume' : 'Start'),
                     ),
-                  ],
-                ),
+                  if (_isRunning && !_isPaused)
+                    ElevatedButton(
+                      onPressed: _pauseSimulation,
+                      child: const Text('Pause'),
+                    ),
+                  ElevatedButton(
+                    onPressed: _stopSimulation,
+                    child: const Text('Stop'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _resetGrid,
+                    child: const Text('Reset'),
+                  ),
+                ],
+              ),
+          
+              const SizedBox(height: 16),
+          
+              // Speed control
+              Row(
+                children: [
+                  const Text('Speed: '),
+                  Expanded(
+                    child: Slider(
+                      min: 0.2,
+                      max: 5.0,
+                      divisions: 48,
+                      value: _speed,
+                      label: '${_speed.toStringAsFixed(1)} gen/s',
+                      onChanged: (value) {
+                        setState(() {
+                          _speed = value;
+          
+                          // If simulation is running, restart it with the new speed
+                          if (_isRunning && !_isPaused) {
+                            _timer?.cancel();
+                            _startSimulation();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  Text('${_speed.toStringAsFixed(1)} gen/s'),
+                ],
+              ),
+          
+              const SizedBox(height: 16),
+          
+              // Grid size controls
+              Row(
+                children: [
+                  const Text('Grid Size: '),
+                  SizedBox(
+                    width: 60,
+                    child: TextField(
+                      controller: _rowsController,
+                      decoration: const InputDecoration(labelText: 'Rows'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const Text(' × '),
+                  SizedBox(
+                    width: 60,
+                    child: TextField(
+                      controller: _colsController,
+                      decoration: const InputDecoration(labelText: 'Cols'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _resizeGrid,
+                    child: const Text('Apply'),
+                  ),
+                ],
+              ),
+          
+              const SizedBox(height: 16),
+          
+              // Import controls
+              ExpansionTile(
+                title: const Text('Import Initial State'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _importController,
+                          decoration: const InputDecoration(
+                            labelText: 'Paste JSON array configuration',
+                            hintText: '[[0,1,0],[1,1,1],[0,1,0]]',
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: _importGrid,
+                          child: const Text('Import'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
