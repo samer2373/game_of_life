@@ -24,7 +24,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web
-        run: flutter build web --base-href=/gol/
+        run: flutter build web --base-href=/game_of_life/
 
       - name: Deploy to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v3
