@@ -35,7 +35,9 @@ class GridWidget extends StatelessWidget {
                         gridModel.grid[rowIndex][colIndex]
                             ? Colors.black
                             : Colors.white,
-                    border: Border.all(color: Colors.grey.withOpacity(0.5)),
+                    border: Border.all(
+                      color: Colors.grey.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ),
