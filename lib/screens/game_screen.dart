@@ -41,9 +41,9 @@ class _GameScreenState extends State<GameScreen> {
     // Add listener to validate JSON as user types
     _importController.addListener(_validateJsonInput);
 
-    // Add listeners to validate grid size inputs
-    _rowsController.addListener(_validateGridSizeInput);
-    _colsController.addListener(_validateGridSizeInput);
+    // // Add listeners to validate grid size inputs
+    // _rowsController.addListener(_validateGridSizeInput);
+    // _colsController.addListener(_validateGridSizeInput);
   }
 
   @override
@@ -122,6 +122,9 @@ class _GameScreenState extends State<GameScreen> {
     // Ensure reasonable limits using the constants
     rows = rows.clamp(_minGridSize, _maxGridSize);
     cols = cols.clamp(_minGridSize, _maxGridSize);
+    // remove errors
+    _rowsError = null;
+    _colsError = null;
 
     _rowsController.text = rows.toString();
     _colsController.text = cols.toString();
@@ -451,6 +454,7 @@ class _GameScreenState extends State<GameScreen> {
                     width: 60,
                     child: TextField(
                       controller: _rowsController,
+                      onChanged: (value) => _validateGridSizeInput(),
                       decoration: InputDecoration(
                         labelText: 'Rows',
                         helperText: '4-30',
@@ -465,6 +469,7 @@ class _GameScreenState extends State<GameScreen> {
                     width: 60,
                     child: TextField(
                       controller: _colsController,
+                      onChanged: (value) => _validateGridSizeInput(),
                       decoration: InputDecoration(
                         labelText: 'Cols',
                         helperText: '4-30',
@@ -476,10 +481,7 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed:
-                        (_rowsError == null && _colsError == null)
-                            ? _resizeGrid
-                            : null, // Disable button if there are errors
+                    onPressed: _resizeGrid,
                     child: const Text('Apply'),
                   ),
                 ],
