@@ -28,11 +28,22 @@ class _GameScreenState extends State<GameScreen> {
   int _finalGenerationCount = 0;
   String? _importError; // Add error message holder for JSON validation
 
+  static const int _minGridSize = 4;
+  static const int _maxGridSize = 30;
+
+  // Add these variables to the class to track validation errors
+  String? _rowsError;
+  String? _colsError;
+
   @override
   void initState() {
     super.initState();
     // Add listener to validate JSON as user types
     _importController.addListener(_validateJsonInput);
+
+    // Add listeners to validate grid size inputs
+    _rowsController.addListener(_validateGridSizeInput);
+    _colsController.addListener(_validateGridSizeInput);
   }
 
   @override
@@ -51,7 +62,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _startSimulation() {
-    if (_isRunning && !_isPaused) return;
+    // if (_isRunning && !_isPaused) return;
 
     setState(() {
       _isRunning = true;
@@ -108,9 +119,9 @@ class _GameScreenState extends State<GameScreen> {
     int rows = int.tryParse(_rowsController.text) ?? 20;
     int cols = int.tryParse(_colsController.text) ?? 20;
 
-    // Ensure reasonable limits
-    rows = rows.clamp(3, 100);
-    cols = cols.clamp(3, 100);
+    // Ensure reasonable limits using the constants
+    rows = rows.clamp(_minGridSize, _maxGridSize);
+    cols = cols.clamp(_minGridSize, _maxGridSize);
 
     _rowsController.text = rows.toString();
     _colsController.text = cols.toString();
@@ -250,6 +261,35 @@ class _GameScreenState extends State<GameScreen> {
   void _dismissEndScreen() {
     setState(() {
       _gameEnded = false;
+    });
+  }
+
+  // Add this method to validate grid size inputs
+  void _validateGridSizeInput() {
+    setState(() {
+      // Validate rows
+      final rowsValue = int.tryParse(_rowsController.text);
+      if (rowsValue == null) {
+        _rowsError = 'Invalid number';
+      } else if (rowsValue < _minGridSize) {
+        _rowsError = 'Min is $_minGridSize';
+      } else if (rowsValue > _maxGridSize) {
+        _rowsError = 'Max is $_maxGridSize';
+      } else {
+        _rowsError = null;
+      }
+
+      // Validate columns
+      final colsValue = int.tryParse(_colsController.text);
+      if (colsValue == null) {
+        _colsError = 'Invalid number';
+      } else if (colsValue < _minGridSize) {
+        _colsError = 'Min is $_minGridSize';
+      } else if (colsValue > _maxGridSize) {
+        _colsError = 'Max is $_maxGridSize';
+      } else {
+        _colsError = null;
+      }
     });
   }
 
@@ -411,7 +451,12 @@ class _GameScreenState extends State<GameScreen> {
                     width: 60,
                     child: TextField(
                       controller: _rowsController,
-                      decoration: const InputDecoration(labelText: 'Rows'),
+                      decoration: InputDecoration(
+                        labelText: 'Rows',
+                        helperText: '4-30',
+                        counterText: '',
+                        errorText: _rowsError,
+                      ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -420,13 +465,21 @@ class _GameScreenState extends State<GameScreen> {
                     width: 60,
                     child: TextField(
                       controller: _colsController,
-                      decoration: const InputDecoration(labelText: 'Cols'),
+                      decoration: InputDecoration(
+                        labelText: 'Cols',
+                        helperText: '4-30',
+                        counterText: '',
+                        errorText: _colsError,
+                      ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _resizeGrid,
+                    onPressed:
+                        (_rowsError == null && _colsError == null)
+                            ? _resizeGrid
+                            : null, // Disable button if there are errors
                     child: const Text('Apply'),
                   ),
                 ],
