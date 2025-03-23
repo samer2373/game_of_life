@@ -16,7 +16,7 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _timer;
   bool _isRunning = false;
   bool _isPaused = false;
-  double _speed = 1.0; // Default speed: 1 generation per second
+  double _speed = 1.0; 
   final TextEditingController _rowsController = TextEditingController(
     text: '20',
   );
@@ -26,22 +26,19 @@ class _GameScreenState extends State<GameScreen> {
   final TextEditingController _importController = TextEditingController();
   bool _gameEnded = false;
   int _finalGenerationCount = 0;
-  String? _importError; // Add error message holder for JSON validation
+  String? _importError;
 
   static const int _minGridSize = 4;
   static const int _maxGridSize = 30;
 
-  // Add these variables to the class to track validation errors
   String? _rowsError;
   String? _colsError;
 
   @override
   void initState() {
     super.initState();
-    // Add listener to validate JSON as user types
     _importController.addListener(_validateJsonInput);
 
-    // // Add listeners to validate grid size inputs
     // _rowsController.addListener(_validateGridSizeInput);
     // _colsController.addListener(_validateGridSizeInput);
   }
@@ -70,14 +67,12 @@ class _GameScreenState extends State<GameScreen> {
       _gameEnded = false;
     });
 
-    // Calculate milliseconds from the speed (which is in generations per second)
     int milliseconds = (1000 / _speed).round();
 
     _timer = Timer.periodic(Duration(milliseconds: milliseconds), (timer) {
       setState(() {
         bool hasChanged = _gameModel.updateToNextGeneration();
 
-        // If no changes occurred, the game has reached a stable state
         if (!hasChanged) {
           _finalGenerationCount = _gameModel.generationCount;
           _gameEnded = true;
@@ -119,10 +114,8 @@ class _GameScreenState extends State<GameScreen> {
     int rows = int.tryParse(_rowsController.text) ?? 20;
     int cols = int.tryParse(_colsController.text) ?? 20;
 
-    // Ensure reasonable limits using the constants
     rows = rows.clamp(_minGridSize, _maxGridSize);
     cols = cols.clamp(_minGridSize, _maxGridSize);
-    // remove errors
     _rowsError = null;
     _colsError = null;
 
@@ -136,7 +129,6 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  // Add JSON validation method
   void _validateJsonInput() {
     if (_importController.text.trim().isEmpty) {
       setState(() {
@@ -149,7 +141,6 @@ class _GameScreenState extends State<GameScreen> {
       final jsonText = _importController.text.trim();
       final decoded = jsonDecode(jsonText);
 
-      // Check if it's an array
       if (decoded is! List) {
         setState(() {
           _importError = 'Input must be a JSON array';
@@ -157,7 +148,6 @@ class _GameScreenState extends State<GameScreen> {
         return;
       }
 
-      // Check if it's a 2D array
       if (decoded.isEmpty) {
         setState(() {
           _importError = 'Grid cannot be empty';
@@ -165,7 +155,6 @@ class _GameScreenState extends State<GameScreen> {
         return;
       }
 
-      // Check each row
       int rowLength = -1;
       for (var i = 0; i < decoded.length; i++) {
         final row = decoded[i];
@@ -176,7 +165,6 @@ class _GameScreenState extends State<GameScreen> {
           return;
         }
 
-        // Check consistency of row lengths
         if (rowLength == -1) {
           rowLength = row.length;
         } else if (row.length != rowLength) {
@@ -186,7 +174,6 @@ class _GameScreenState extends State<GameScreen> {
           return;
         }
 
-        // Check each cell is a valid value (0, 1, true, or false)
         for (var j = 0; j < row.length; j++) {
           final cell = row[j];
           if (cell != 0 && cell != 1 && cell != true && cell != false) {
@@ -198,7 +185,6 @@ class _GameScreenState extends State<GameScreen> {
         }
       }
 
-      // If we got here, JSON is valid
       setState(() {
         _importError = null;
       });
@@ -214,7 +200,6 @@ class _GameScreenState extends State<GameScreen> {
       final String importText = _importController.text.trim();
       if (importText.isEmpty) return;
 
-      // Validate JSON before importing
       _validateJsonInput();
       if (_importError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -223,7 +208,6 @@ class _GameScreenState extends State<GameScreen> {
         return;
       }
 
-      // Parse the imported text as a JSON array
       List<dynamic> jsonList = jsonDecode(importText) as List<dynamic>;
       List<List<bool>> newGrid =
           jsonList
@@ -267,10 +251,8 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  // Add this method to validate grid size inputs
   void _validateGridSizeInput() {
     setState(() {
-      // Validate rows
       final rowsValue = int.tryParse(_rowsController.text);
       if (rowsValue == null) {
         _rowsError = 'Invalid number';
@@ -282,7 +264,6 @@ class _GameScreenState extends State<GameScreen> {
         _rowsError = null;
       }
 
-      // Validate columns
       final colsValue = int.tryParse(_colsController.text);
       if (colsValue == null) {
         _colsError = 'Invalid number';
@@ -298,7 +279,6 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if the screen width is large enough for horizontal layout
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideScreen = screenWidth > 800;
 
@@ -324,10 +304,10 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildHorizontalLayout() {
     return Row(
       crossAxisAlignment:
-          CrossAxisAlignment.stretch, // Changed from start to stretch
+          CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          flex: 3, // Grid takes more space
+          flex: 3,
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -340,10 +320,10 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ),
         Expanded(
-          flex: 2, // Controls take less space
+          flex: 2,
           child: _buildControlPanel(
             isFullHeight: true,
-          ), // Pass parameter to indicate full height
+          ), 
         ),
       ],
     );
@@ -363,7 +343,7 @@ class _GameScreenState extends State<GameScreen> {
           ),
           _buildControlPanel(
             isFullHeight: false,
-          ), // Not full height in vertical layout
+          ), 
         ],
       ),
     );
@@ -376,18 +356,16 @@ class _GameScreenState extends State<GameScreen> {
       height:
           isFullHeight
               ? double.infinity
-              : null, // Take full height when requested
+              : null, 
       child: Center(
-        // Added Center widget
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment:
-                CrossAxisAlignment.center, // Changed from stretch to center
+                CrossAxisAlignment.center, 
             mainAxisAlignment:
-                MainAxisAlignment.center, // Added main axis alignment
+                MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Game controls
               Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
@@ -416,7 +394,6 @@ class _GameScreenState extends State<GameScreen> {
 
               const SizedBox(height: 16),
 
-              // Speed control
               Row(
                 children: [
                   const Text('Speed: '),
@@ -431,7 +408,6 @@ class _GameScreenState extends State<GameScreen> {
                         setState(() {
                           _speed = value;
 
-                          // If simulation is running, restart it with the new speed
                           if (_isRunning && !_isPaused) {
                             _timer?.cancel();
                             _startSimulation();
@@ -446,7 +422,6 @@ class _GameScreenState extends State<GameScreen> {
 
               const SizedBox(height: 16),
 
-              // Grid size controls
               Row(
                 children: [
                   const Text('Grid Size: '),
@@ -489,7 +464,6 @@ class _GameScreenState extends State<GameScreen> {
 
               const SizedBox(height: 16),
 
-              // Import controls
               Card(
                 child: ExpansionTile(
                   title: const Text('Import Initial State'),
@@ -504,9 +478,9 @@ class _GameScreenState extends State<GameScreen> {
                               labelText: 'Paste JSON array configuration',
                               hintText: '[[0,1,0],[1,1,1],[0,1,0]]',
                               errorText:
-                                  _importError, // Display validation error
+                                  _importError, 
                               errorMaxLines:
-                                  3, // Allow multiple lines for error message
+                                  3, 
                             ),
                             maxLines: 3,
                           ),
@@ -515,7 +489,7 @@ class _GameScreenState extends State<GameScreen> {
                             onPressed:
                                 _importError == null
                                     ? _importGrid
-                                    : null, // Disable button if there's an error
+                                    : null, 
                             child: const Text('Import'),
                           ),
                         ],
